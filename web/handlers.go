@@ -15,7 +15,7 @@ func (ap *aplication) GetDeckInHand(w http.ResponseWriter, req *http.Request) { 
 	rand.Seed(time.Now().UnixNano())
 
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
-	for g := range ap.Games[id].Users {
+	for g := range ap.Games[id].Users { //Раздача карт в руки
 		for i := 0; i < 8; i++ {
 			len := len(ap.Games[id].CurrentDeck.Deckcard)
 			idcard := rand.Intn(len)
@@ -31,8 +31,11 @@ func (ap *aplication) GetDeckInHand(w http.ResponseWriter, req *http.Request) { 
 			}
 		}
 	}
+	//Первая карта на столе
+	ap.Games[id].DropDeck.Deckcard = append(ap.Games[id].DropDeck.Deckcard, ap.Games[id].CurrentDeck.Deckcard[0])
+	ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...)
 
-	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].FirstMove = true
+	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].FirstMove = true //Определение первого кто ходит
 
 	js, err := json.Marshal(ap.Games[id].Users)
 	if err != nil {
@@ -49,11 +52,11 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 
 	log.Println(userid)
 
-	v := ap.Games[id].CurrentDeck.Deckcard[0] //Надо id игры и id пользователя соотвественно
-	ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...)
+	v := ap.Games[id].CurrentDeck.Deckcard[0]                                                                                    //Получение верхней карты
+	ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...) //Удаление верхней карты их текущей деки
 
-	ap.Games[id].Users[userid].Deckinhand.Deckcard = append(ap.Games[id].Users[userid].Deckinhand.Deckcard, v)
-	ap.Games[id].Users[userid].Actions = append(ap.Games[id].Users[userid].Actions, action{Useraction: takecard, Card: v})
+	ap.Games[id].Users[userid].Deckinhand.Deckcard = append(ap.Games[id].Users[userid].Deckinhand.Deckcard, v)             //Добавление карты в руку пользователю
+	ap.Games[id].Users[userid].Actions = append(ap.Games[id].Users[userid].Actions, action{Useraction: takecard, Card: v}) //Записываем действие "Взял карту"
 
 	js, err := json.Marshal(v)
 	if err != nil {
@@ -69,7 +72,7 @@ func (ap *aplication) PutCardsPlayedInDeck(w http.ResponseWriter, req *http.Requ
 
 }
 
-func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) {
+func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) { //Отправка инфы по игре
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
 
 	js, err := json.Marshal(ap.Games[id])
@@ -80,11 +83,7 @@ func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
-	for g := range ap.Games[id].Users {
+	for g := range ap.Games[id].Users { //удаляем действия пользователей
 		ap.Games[id].Users[g].Actions = nil
 	}
-	//игрок  ИД Количество карт в руке
-	//масив действий игроков которые произошли с момента последнего запроса записывать действия игроков в масив
-	//
-
 }
