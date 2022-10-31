@@ -23,13 +23,13 @@ const (
 type cardtype string
 
 type card struct {
-	CardType cardtype `json:"CardType"`
-	Number   int      `json:"Number"`
-	Color    string   `json:"Color"`
+	CardType cardtype `json:"cardType"`
+	Number   int      `json:"number"`
+	Color    string   `json:"color"`
 }
 
 type deck struct {
-	Deckcard []card `json:"Deckcard"`
+	Deckcard []card `json:"deckcard"`
 }
 
 func NewDeck() *deck {
