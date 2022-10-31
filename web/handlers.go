@@ -70,6 +70,19 @@ func (ap *aplication) PutCardsPlayedInDeck(w http.ResponseWriter, req *http.Requ
 }
 
 func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.Atoi(mux.Vars(req)["id"])
+
+	js, err := json.Marshal(ap.Games[id])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+	for g := range ap.Games[id].Users {
+		ap.Games[id].Users[g].Actions = nil
+	}
 	//игрок  ИД Количество карт в руке
 	//масив действий игроков которые произошли с момента последнего запроса записывать действия игроков в масив
 	//
