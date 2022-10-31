@@ -14,6 +14,7 @@ type user struct {
 	Id         int      `json:"id"`
 	Actions    []action `json:"actions"`
 	Deckinhand deck     `json:"deckinhand"`
+	FirstMove  bool     `json:"firstmove"`
 }
 type game struct {
 	Id          int    `json:"id"`
