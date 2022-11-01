@@ -11,14 +11,16 @@ type action struct {
 	Card       card   `json:"card"`
 }
 type user struct {
-	Id         int      `json:"id"`
-	Actions    []action `json:"actions"`
-	Deckinhand deck     `json:"deckinhand"`
-	FirstMove  bool     `json:"firstmove"`
+	Id             int      `json:"id"`
+	Actions        []action `json:"actions"`
+	Deckinhand     deck     `json:"deckinhand"`
+	FirstMove      bool     `json:"firstmove"`
+	MoveInThisTurn bool     `json:"moveinthisturn"`
 }
 type game struct {
 	Id          int    `json:"id"`
 	Users       []user `json:"users"`
 	CurrentDeck deck   `json:"currentdeck"`
 	DropDeck    deck   `json:"dropdeck"`
+	GameStart   bool   `json:"gamestart"`
 }
