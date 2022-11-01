@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -51,32 +50,52 @@ func (ap *aplication) GetDeckInHand(w http.ResponseWriter, req *http.Request) { 
 
 func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //Получение верхней карты при доборе
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
-	userid, err := strconv.Atoi(req.URL.Query().Get("user"))
-	if err != nil {
-		http.Error(w, "chto za kal v uzere", http.StatusInternalServerError)
-		return
+
+	type userid struct {
+		Id int
 	}
-	if userid == 0 {
-		http.Error(w, "User ukazhi daun", http.StatusBadRequest)
+
+	var user userid
+
+	err := json.NewDecoder(req.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// log.Printf(strconv.FormatInt(int64(user.id), 10))
+	// , err := strconv.Atoi(req.URL.Query().Get("user"))
+	// if err != nil {
+	// 	http.Error(w, "chto za kal v uzere", http.StatusInternalServerError)
+	// 	return
+	// }
+	// if user.id == 0 {
+	// 	http.Error(w, "User ukazhi daun", http.StatusBadRequest)
+	// 	return
+	// }
+
 	var iduser int
 	for i, k := range ap.Games[id].Users {
-		if userid == k.Id {
+		if (user.Id) == k.Id {
 			iduser = i
 		}
 	}
 
-	log.Println(userid)
+	// log.Println(userid)
 
 	v := ap.Games[id].CurrentDeck.Deckcard[0]                                                                                    //Получение верхней карты
 	ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...) //Удаление верхней карты их текущей деки
 
 	ap.Games[id].Users[iduser].Deckinhand.Deckcard = append(ap.Games[id].Users[iduser].Deckinhand.Deckcard, v)             //Добавление карты в руку пользователю
-	ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Card: v}) //Записываем действие "Взял карту"
+	ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: v}) //Записываем действие "Взял карту"
+	for iduser, k := range ap.Games[id].Users {
+		if user.Id != k.Id {
+			ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard}) //Еблан добавь вывод юзера
+		}
+	}
 
-	js, err := json.MarshalIndent(v, "", "")
+	// ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: })
+	js, err := json.MarshalIndent(ap.Games[id].Users[iduser].Actions, "", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -106,7 +125,7 @@ func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (ap *aplication) CreatGame(w http.ResponseWriter, req *http.Request) {
+func (ap *aplication) CreateGame(w http.ResponseWriter, req *http.Request) {
 	ap.idforgame++
 
 	decks := NewDeck()
@@ -132,24 +151,48 @@ func (ap *aplication) CreatGame(w http.ResponseWriter, req *http.Request) {
 	w.Write(js)
 }
 
-func (ap *aplication) CreatUser(w http.ResponseWriter, req *http.Request) {
+func (ap *aplication) CreateUser(w http.ResponseWriter, req *http.Request) {
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
 
 	ap.idforuser++
 
 	ap.Games[id].Users = append(ap.Games[id].Users, user{Id: ap.idforuser, Actions: make([]action, 0), Deckinhand: deck{Deckcard: make([]card, 0)}})
 
-	var iduser user
+	type UserResponse struct {
+		Id   int    `json:"id"`
+		Name string `json:"name"`
+	}
+
+	type Response struct {
+		CreatIdUser int
+		Users       []UserResponse `json:"User"`
+	}
+
+	user := UserResponse{}
 	for _, k := range ap.Games[id].Users {
 		if ap.idforuser == k.Id {
-			iduser = k
+			user.Id = ap.idforuser
+			user.Name = k.Name
 		}
 	}
 
-	js, err := json.MarshalIndent(iduser, "", "")
+	for iduser := range ap.Games[id].Users {
+		ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: newuser, Data: user})
+	}
+
+	UserArray := Response{CreatIdUser: ap.idforuser, Users: make([]UserResponse, 0)}
+
+	for _, k := range ap.Games[id].Users {
+		UserArray.Users = append(UserArray.Users, UserResponse{Id: k.Id, Name: k.Name})
+	}
+
+	js, err := json.MarshalIndent(UserArray, "", "")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write(js)
 }
+
+//методы: Вернуть список комнат, Вернуть список игроков ИД
+//Переделать переддачу черех экшоны

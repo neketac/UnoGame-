@@ -4,14 +4,16 @@ const (
 	skipmove = "skipmove"
 	takecard = "takecard"
 	putcard  = "putcard"
+	newuser  = "newuser"
 )
 
 type action struct {
-	Useraction string `json:"useraction"`
-	Card       card   `json:"card"`
+	Useraction string      `json:"useraction"`
+	Data       interface{} `json:"card"`
 }
 type user struct {
 	Id             int      `json:"id"`
+	Name           string   `json:"name"`
 	Actions        []action `json:"actions"`
 	Deckinhand     deck     `json:"deckinhand"`
 	FirstMove      bool     `json:"firstmove"`
