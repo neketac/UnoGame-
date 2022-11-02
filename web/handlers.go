@@ -82,8 +82,8 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 	}
 	userforactions := UserForActions{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name}
 
-	v := ap.Games[id].CurrentDeck.Deckcard[0]                                                                                    //Получение верхней карты
-	ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...) //Удаление верхней карты их текущей деки
+	v := ap.Games[id].CurrentDeck.Deckcard[0]
+	ClearCard(ap.Games[id].CurrentDeck.Deckcard, 0)
 
 	ap.Games[id].Users[iduser].Deckinhand.Deckcard = append(ap.Games[id].Users[iduser].Deckinhand.Deckcard, v)             //Добавление карты в руку пользователю
 	ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: v}) //Записываем действие "Взял карту"
