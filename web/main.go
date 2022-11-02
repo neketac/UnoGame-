@@ -36,7 +36,7 @@ func main() {
 	r.HandleFunc("/GetListGame", app.GetListGame).Methods("GET")
 
 	r.HandleFunc("/game/{id:[0-9]+}/GetHighCard", app.GetHighCard).Methods("POST")
-	r.HandleFunc("/game/{id:[0-9]+}/DropCard", app.DropCard).Methods("POST")
+	r.HandleFunc("/game/{id:[0-9]+}/PlayCard", app.PlayCard).Methods("POST")
 
 	// r.HandleFunc("/articles", ArticlesHandler)
 	// http.Handle("/", r)
