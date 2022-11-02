@@ -58,12 +58,7 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 		return
 	}
 
-	var iduser int
-	for i, k := range ap.Games[id].Users {
-		if (user.Id) == k.Id {
-			iduser = i
-		}
-	}
+	iduser, _ := ap.Games[id].SearchIdUser(user.Id)
 
 	type UserResponse struct {
 		Id        int      `json:"id"`
@@ -84,8 +79,8 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 
 	v := ap.Games[id].CurrentDeck.Deckcard[0]
 	ap.Games[id].CurrentDeck.ClearCard(0)
-	ap.Games[id].Users[iduser].Deckinhand.AddingCard(v)                                                                    //Добавление карты в руку пользователю
-	ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: v}) //Записываем действие "Взял карту"
+	ap.Games[id].Users[iduser].Deckinhand.AddingCard(v) //Добавление карты в руку пользователю
+	ap.Games[id].Users[iduser].WriteAction(takecard, v) //Записываем действие "Взял карту"
 	for iduser, k := range ap.Games[id].Users {
 		if user.Id != k.Id {
 			ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: userforactions}) //Еблан добавь вывод юзера
@@ -96,10 +91,6 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 
 	// ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: })
 	help.RenderAndWrite(w, resuser)
-}
-
-func (ap *aplication) PutCardsPlayedInDeck(w http.ResponseWriter, req *http.Request) {
-
 }
 
 func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) { //Отправка инфы по игре
@@ -120,12 +111,7 @@ func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	var useridget int
-	for i, k := range ap.Games[id].Users {
-		if (user.Id) == k.Id {
-			useridget = i
-		}
-	}
+	useridget, _ := ap.Games[id].SearchIdUser(user.Id)
 
 	type Response struct {
 		Id      int      `json:"id"`
@@ -186,7 +172,7 @@ func (ap *aplication) CreateUser(w http.ResponseWriter, req *http.Request) {
 	}
 
 	for iduser := range ap.Games[id].Users {
-		ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: newuser, Data: user})
+		ap.Games[id].Users[iduser].WriteAction(newuser, user)
 	}
 
 	UserArray := Response{CreatIdUser: ap.idforuser, Users: make([]UserResponse, 0)}
@@ -253,12 +239,7 @@ func (ap *aplication) PlayCard(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var userid int
-	for i, k := range ap.Games[id].Users {
-		if requestcard.Id == k.Id {
-			userid = i
-		}
-	}
+	userid, _ := ap.Games[id].SearchIdUser(requestcard.Id)
 
 	type Respone struct {
 		Permitted bool `json:"permitted"`

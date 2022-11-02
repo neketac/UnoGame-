@@ -27,3 +27,16 @@ type game struct {
 	DropDeck      deck   `json:"dropdeck"`
 	GameStart     bool   `json:"gamestart"`
 }
+
+func (g *game) SearchIdUser(id int) (int, bool) {
+	for i, k := range g.Users {
+		if id == k.Id {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func (g *user) WriteAction(s string, v interface{}) {
+	g.Actions = append(g.Actions, action{Useraction: s, Data: v})
+}
