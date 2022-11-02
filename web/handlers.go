@@ -21,20 +21,14 @@ func (ap *aplication) GetDeckInHand(w http.ResponseWriter, req *http.Request) { 
 			len := len(ap.Games[id].CurrentDeck.Deckcard)
 			idcard := rand.Intn(len)
 
-			ap.Games[id].Users[g].Deckinhand.Deckcard = append(ap.Games[id].Users[g].Deckinhand.Deckcard, ap.Games[id].CurrentDeck.Deckcard[idcard])
+			AddingCard(ap.Games[id].Users[g].Deckinhand.Deckcard, ap.Games[id].CurrentDeck.Deckcard[idcard])
 
-			if idcard == 0 {
-				ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...)
-			} else if idcard == len-1 {
-				ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[:idcard-1], ap.Games[id].CurrentDeck.Deckcard[idcard-1:idcard]...)
-			} else {
-				ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[:idcard-1], ap.Games[id].CurrentDeck.Deckcard[idcard+1:]...)
-			}
+			ClearCard(ap.Games[id].CurrentDeck.Deckcard, idcard)
 		}
 	}
 	//Первая карта на столе
-	ap.Games[id].DropDeck.Deckcard = append(ap.Games[id].DropDeck.Deckcard, ap.Games[id].CurrentDeck.Deckcard[0])
-	ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...)
+	AddingCard(ap.Games[id].DropDeck.Deckcard, ap.Games[id].CurrentDeck.Deckcard[0])
+	ClearCard(ap.Games[id].CurrentDeck.Deckcard, 0)
 
 	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].FirstMove = true //Определение первого кто ходит
 	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].MoveInThisTurn = true
@@ -72,12 +66,21 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 	}
 
 	type UserResponse struct {
+		Id        int      `json:"id"`
+		Name      string   `json:"name"`
+		Permitted bool     `json:"permitted"`
+		Actions   []action `json:"action"`
+	}
+	if !ap.Games[id].Users[iduser].MoveInThisTurn {
+		notpermited := UserResponse{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name, Permitted: false}
+		help.RenderAndWrite(w, notpermited)
+	}
+
+	type UserForActions struct {
 		Id   int    `json:"id"`
 		Name string `json:"name"`
 	}
-
-	resuser := UserResponse{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name}
-	// log.Println(userid)
+	userforactions := UserForActions{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name}
 
 	v := ap.Games[id].CurrentDeck.Deckcard[0]                                                                                    //Получение верхней карты
 	ap.Games[id].CurrentDeck.Deckcard = append(ap.Games[id].CurrentDeck.Deckcard[1:2], ap.Games[id].CurrentDeck.Deckcard[2:]...) //Удаление верхней карты их текущей деки
@@ -86,12 +89,14 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 	ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: v}) //Записываем действие "Взял карту"
 	for iduser, k := range ap.Games[id].Users {
 		if user.Id != k.Id {
-			ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: resuser}) //Еблан добавь вывод юзера
+			ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: userforactions}) //Еблан добавь вывод юзера
 		}
 	}
 
+	resuser := UserResponse{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name, Permitted: true, Actions: ap.Games[id].Users[iduser].Actions}
+
 	// ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: })
-	help.RenderAndWrite(w, ap.Games[id].Users[iduser].Actions)
+	help.RenderAndWrite(w, resuser)
 }
 
 func (ap *aplication) PutCardsPlayedInDeck(w http.ResponseWriter, req *http.Request) {
@@ -234,7 +239,7 @@ func (ap *aplication) GetListUsers(w http.ResponseWriter, req *http.Request) {
 	help.RenderAndWrite(w, ResponseUser)
 }
 
-func (ap *aplication) DropCard(w http.ResponseWriter, req *http.Request) {
+func (ap *aplication) PlayCard(w http.ResponseWriter, req *http.Request) {
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
 
 	type Request struct {
@@ -255,15 +260,29 @@ func (ap *aplication) DropCard(w http.ResponseWriter, req *http.Request) {
 			userid = i
 		}
 	}
-	if !ap.Games[id].Users[userid].MoveInThisTurn {
-		help.RenderAndWrite(w, false)
+
+	type Respone struct {
+		Permitted bool `json:"permitted"`
 	}
 
-	// equals := CheckCard(requestcard.Dropcard, ap.Games[id].DropDeck.Deckcard)
+	responsebool := Respone{}
 
-	// if requestcard.Dropcard.CardType == numeric && equals {
+	if !ap.Games[id].Users[userid].MoveInThisTurn {
+		help.RenderAndWrite(w, responsebool)
+	}
 
-	// }
+	equals := CheckCard(requestcard.Dropcard, ap.Games[id].DropDeck.Deckcard)
+
+	if requestcard.Dropcard.CardType == numeric && equals {
+		var idcard int
+		for i, k := range ap.Games[id].Users[userid].Deckinhand.Deckcard {
+			if k == requestcard.Dropcard {
+				idcard = i
+			}
+		}
+		ClearCard(ap.Games[id].Users[userid].Deckinhand.Deckcard, idcard)
+
+	}
 
 }
 

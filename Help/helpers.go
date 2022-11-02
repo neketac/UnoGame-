@@ -14,5 +14,3 @@ func RenderAndWrite(w http.ResponseWriter, read interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
-
-func CheckCard(c deckcard.card)

@@ -103,3 +103,18 @@ func CheckCard(c card, dropdeck []card) bool {
 
 	return false
 }
+
+func ClearCard(arr []card, idcard int) {
+	len := len(arr)
+	if idcard == 0 {
+		arr = append(arr[1:2], arr[2:]...)
+	} else if idcard == len-1 {
+		arr = append(arr[:idcard-1], arr[idcard-1:idcard]...)
+	} else {
+		arr = append(arr[:idcard-1], arr[idcard+1:]...)
+	}
+}
+
+func AddingCard(arr []card, cardinarr card) {
+	arr = append(arr, cardinarr)
+}
