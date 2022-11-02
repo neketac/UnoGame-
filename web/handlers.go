@@ -21,14 +21,14 @@ func (ap *aplication) GetDeckInHand(w http.ResponseWriter, req *http.Request) { 
 			len := len(ap.Games[id].CurrentDeck.Deckcard)
 			idcard := rand.Intn(len)
 
-			AddingCard(ap.Games[id].Users[g].Deckinhand.Deckcard, ap.Games[id].CurrentDeck.Deckcard[idcard])
+			ap.Games[id].Users[g].Deckinhand.AddingCard(ap.Games[id].CurrentDeck.Deckcard[idcard])
 
-			ClearCard(ap.Games[id].CurrentDeck.Deckcard, idcard)
+			ap.Games[id].CurrentDeck.ClearCard(idcard)
 		}
 	}
 	//Первая карта на столе
-	AddingCard(ap.Games[id].DropDeck.Deckcard, ap.Games[id].CurrentDeck.Deckcard[0])
-	ClearCard(ap.Games[id].CurrentDeck.Deckcard, 0)
+	ap.Games[id].DropDeck.AddingCard(ap.Games[id].CurrentDeck.Deckcard[0])
+	ap.Games[id].CurrentDeck.ClearCard(0)
 
 	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].FirstMove = true //Определение первого кто ходит
 	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].MoveInThisTurn = true
@@ -83,9 +83,8 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 	userforactions := UserForActions{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name}
 
 	v := ap.Games[id].CurrentDeck.Deckcard[0]
-	ClearCard(ap.Games[id].CurrentDeck.Deckcard, 0)
-
-	ap.Games[id].Users[iduser].Deckinhand.Deckcard = append(ap.Games[id].Users[iduser].Deckinhand.Deckcard, v)             //Добавление карты в руку пользователю
+	ap.Games[id].CurrentDeck.ClearCard(0)
+	ap.Games[id].Users[iduser].Deckinhand.AddingCard(v)                                                                    //Добавление карты в руку пользователю
 	ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: v}) //Записываем действие "Взял карту"
 	for iduser, k := range ap.Games[id].Users {
 		if user.Id != k.Id {
@@ -280,7 +279,8 @@ func (ap *aplication) PlayCard(w http.ResponseWriter, req *http.Request) {
 				idcard = i
 			}
 		}
-		ClearCard(ap.Games[id].Users[userid].Deckinhand.Deckcard, idcard)
+		ap.Games[id].Users[userid].Deckinhand.ClearCard(idcard)
+		ap.Games[id].DropDeck.AddingCard(requestcard.Dropcard)
 
 	}
 
