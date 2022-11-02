@@ -22,6 +22,11 @@ const (
 
 type cardtype string
 
+type equalscard struct {
+	equalscolor  bool
+	equalsnumber bool
+}
+
 type card struct {
 	CardType cardtype `json:"cardType"`
 	Number   int      `json:"number"`
@@ -64,4 +69,37 @@ func (d *deck) Shuffle() {
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(d.Deckcard),
 		func(i, j int) { d.Deckcard[i], d.Deckcard[j] = d.Deckcard[j], d.Deckcard[i] })
+}
+
+func CheckCard(c card, dropdeck []card) bool {
+	if c.Color == wild {
+		return true
+	}
+
+	lendropdeck := len(dropdeck)
+	equals := equalscard{}
+
+	switch c.Color {
+	case dropdeck[lendropdeck-1].Color:
+		equals.equalscolor = true
+	default:
+		equals.equalscolor = false
+	}
+
+	switch c.Number {
+	case dropdeck[lendropdeck-1].Number:
+		equals.equalscolor = true
+	default:
+		equals.equalscolor = false
+	}
+
+	if (c.CardType == drawtwo || c.CardType == skip || c.CardType == revers) && equals.equalscolor {
+		return true
+	}
+
+	if c.CardType == numeric && (equals.equalscolor || equals.equalsnumber) {
+		return true
+	}
+
+	return false
 }

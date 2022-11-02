@@ -1,7 +1,9 @@
 package main
 
 import (
+	help "UnoGame/Help"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -39,17 +41,16 @@ func (ap *aplication) GetDeckInHand(w http.ResponseWriter, req *http.Request) { 
 
 	ap.Games[id].GameStart = true //Обьявляет что игра началась
 
-	js, err := json.MarshalIndent(ap.Games[id].Users, "", "")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	help.RenderAndWrite(w, ap.Games[id].Users)
 }
 
 func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //Получение верхней карты при доборе
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
+
+	if len(ap.Games[id].Users) == 0 {
+		http.Error(w, "Userov Net Eblan", http.StatusBadRequest)
+		return
+	}
 
 	type userid struct {
 		Id int
@@ -59,20 +60,9 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 
 	err := json.NewDecoder(req.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("%v\nchto za kal v uzere", err.Error()), http.StatusBadRequest)
 		return
 	}
-
-	// log.Printf(strconv.FormatInt(int64(user.id), 10))
-	// , err := strconv.Atoi(req.URL.Query().Get("user"))
-	// if err != nil {
-	// 	http.Error(w, "chto za kal v uzere", http.StatusInternalServerError)
-	// 	return
-	// }
-	// if user.id == 0 {
-	// 	http.Error(w, "User ukazhi daun", http.StatusBadRequest)
-	// 	return
-	// }
 
 	var iduser int
 	for i, k := range ap.Games[id].Users {
@@ -81,6 +71,12 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 		}
 	}
 
+	type UserResponse struct {
+		Id   int    `json:"id"`
+		Name string `json:"name"`
+	}
+
+	resuser := UserResponse{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name}
 	// log.Println(userid)
 
 	v := ap.Games[id].CurrentDeck.Deckcard[0]                                                                                    //Получение верхней карты
@@ -90,19 +86,12 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 	ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: v}) //Записываем действие "Взял карту"
 	for iduser, k := range ap.Games[id].Users {
 		if user.Id != k.Id {
-			ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard}) //Еблан добавь вывод юзера
+			ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: resuser}) //Еблан добавь вывод юзера
 		}
 	}
 
 	// ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: })
-	js, err := json.MarshalIndent(ap.Games[id].Users[iduser].Actions, "", "")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	help.RenderAndWrite(w, ap.Games[id].Users[iduser].Actions)
 }
 
 func (ap *aplication) PutCardsPlayedInDeck(w http.ResponseWriter, req *http.Request) {
@@ -111,15 +100,36 @@ func (ap *aplication) PutCardsPlayedInDeck(w http.ResponseWriter, req *http.Requ
 
 func (ap *aplication) GetCurrentState(w http.ResponseWriter, req *http.Request) { //Отправка инфы по игре
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
+	type userid struct {
+		Id int
+	}
 
-	js, err := json.MarshalIndent(ap.Games[id], "", "")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if len(ap.Games[id].Users) == 0 {
+		http.Error(w, "Userov Net Eblan", http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	var user userid
+	err := json.NewDecoder(req.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("%v\nchto za kal v uzere", err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	var useridget int
+	for i, k := range ap.Games[id].Users {
+		if (user.Id) == k.Id {
+			useridget = i
+		}
+	}
+
+	type Response struct {
+		Id      int      `json:"id"`
+		Actions []action `json:"actions"`
+	}
+	ResponseUser := Response{Id: ap.Games[id].Users[useridget].Id, Actions: ap.Games[id].Users[useridget].Actions}
+
+	help.RenderAndWrite(w, ResponseUser)
 	for g := range ap.Games[id].Users { //удаляем действия пользователей
 		ap.Games[id].Users[g].Actions = nil
 	}
@@ -143,12 +153,7 @@ func (ap *aplication) CreateGame(w http.ResponseWriter, req *http.Request) {
 	}
 	id := ResponseId{Id: ap.idforgame}
 
-	js, err := json.MarshalIndent(id, "", "")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write(js)
+	help.RenderAndWrite(w, id)
 }
 
 func (ap *aplication) CreateUser(w http.ResponseWriter, req *http.Request) {
@@ -186,12 +191,80 @@ func (ap *aplication) CreateUser(w http.ResponseWriter, req *http.Request) {
 		UserArray.Users = append(UserArray.Users, UserResponse{Id: k.Id, Name: k.Name})
 	}
 
-	js, err := json.MarshalIndent(UserArray, "", "")
+	help.RenderAndWrite(w, UserArray)
+}
+
+func (ap *aplication) GetListGame(w http.ResponseWriter, req *http.Request) {
+	if len(ap.Games) == 0 {
+		http.Error(w, "Igor net Daunich", http.StatusBadRequest)
+	}
+
+	type Respone struct {
+		GamesArray []int
+	}
+
+	ResponeGames := Respone{GamesArray: make([]int, 0)}
+	for _, k := range ap.Games {
+		ResponeGames.GamesArray = append(ResponeGames.GamesArray, k.Id)
+	}
+
+	help.RenderAndWrite(w, ResponeGames)
+}
+
+func (ap *aplication) GetListUsers(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.Atoi(mux.Vars(req)["id"])
+	if len(ap.Games[id].Users) == 0 {
+		http.Error(w, "Igrokov net Daunich", http.StatusBadRequest)
+	}
+
+	type ResUser struct {
+		Id   int
+		Name string
+	}
+
+	type Respone struct {
+		UsersArray []ResUser
+	}
+
+	ResponseUser := Respone{UsersArray: make([]ResUser, 0)}
+	for _, k := range ap.Games[id].Users {
+		ResponseUser.UsersArray = append(ResponseUser.UsersArray, ResUser{Id: k.Id, Name: k.Name})
+	}
+
+	help.RenderAndWrite(w, ResponseUser)
+}
+
+func (ap *aplication) DropCard(w http.ResponseWriter, req *http.Request) {
+	id, _ := strconv.Atoi(mux.Vars(req)["id"])
+
+	type Request struct {
+		Id       int
+		Dropcard card
+	}
+
+	var requestcard Request
+	err := json.NewDecoder(req.Body).Decode(&requestcard)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("%v\nchto za karta uebumba?", err.Error()), http.StatusBadRequest)
 		return
 	}
-	w.Write(js)
+
+	var userid int
+	for i, k := range ap.Games[id].Users {
+		if requestcard.Id == k.Id {
+			userid = i
+		}
+	}
+	if !ap.Games[id].Users[userid].MoveInThisTurn {
+		help.RenderAndWrite(w, false)
+	}
+
+	// equals := CheckCard(requestcard.Dropcard, ap.Games[id].DropDeck.Deckcard)
+
+	// if requestcard.Dropcard.CardType == numeric && equals {
+
+	// }
+
 }
 
 //методы: Вернуть список комнат, Вернуть список игроков ИД

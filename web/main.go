@@ -14,7 +14,7 @@ type aplication struct {
 }
 
 func main() {
-	app := &aplication{idforgame: 0, Games: make([]game, 0)}
+	app := &aplication{idforuser: -1, idforgame: -1, Games: make([]game, 0)}
 	v := NewDeck()
 	v.GenerateDeck()
 	v.Shuffle()
@@ -27,11 +27,16 @@ func main() {
 	app.Games[0].CurrentDeck.Deckcard = append(app.Games[0].CurrentDeck.Deckcard[:102], app.Games[0].CurrentDeck.Deckcard[102:104]...)
 	r := mux.NewRouter()
 	// r.HandleFunc("/", HomeHandler)
-	r.HandleFunc("/game/{id:[0-9]+}/GetHighCard", app.GetHighCard).Methods("POST")        //GET
-	r.HandleFunc("/game/{id:[0-9]+}/GetDeckInHand", app.GetDeckInHand).Methods("GET")     //GET
-	r.HandleFunc("/game/{id:[0-9]+}/GetCurrentState", app.GetCurrentState).Methods("GET") //GET
-	r.HandleFunc("/CreateGame", app.CreateGame).Methods("POST")                           //POST
-	r.HandleFunc("/game/{id:[0-9]+}/CreateUser", app.CreateUser).Methods("GET")           //POST
+	r.HandleFunc("/CreateGame", app.CreateGame).Methods("POST")
+	r.HandleFunc("/game/{id:[0-9]+}/CreateUser", app.CreateUser).Methods("GET")
+	r.HandleFunc("/game/{id:[0-9]+}/GetDeckInHand", app.GetDeckInHand).Methods("GET")
+
+	r.HandleFunc("/game/{id:[0-9]+}/GetCurrentState", app.GetCurrentState).Methods("POST")
+	r.HandleFunc("/game/{id:[0-9]+}/GetListUsers", app.GetListUsers).Methods("GET")
+	r.HandleFunc("/GetListGame", app.GetListGame).Methods("GET")
+
+	r.HandleFunc("/game/{id:[0-9]+}/GetHighCard", app.GetHighCard).Methods("POST")
+
 	// r.HandleFunc("/articles", ArticlesHandler)
 	// http.Handle("/", r)
 	log.Printf("Запуск сервера на http://127.0.0.1:80")

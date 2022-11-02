@@ -20,9 +20,10 @@ type user struct {
 	MoveInThisTurn bool     `json:"moveinthisturn"`
 }
 type game struct {
-	Id          int    `json:"id"`
-	Users       []user `json:"users"`
-	CurrentDeck deck   `json:"currentdeck"`
-	DropDeck    deck   `json:"dropdeck"`
-	GameStart   bool   `json:"gamestart"`
+	Id            int    `json:"id"`
+	Users         []user `json:"users"`
+	DirectionGame bool   `josn:"directiongame"`
+	CurrentDeck   deck   `json:"currentdeck"`
+	DropDeck      deck   `json:"dropdeck"`
+	GameStart     bool   `json:"gamestart"`
 }
