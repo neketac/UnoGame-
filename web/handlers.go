@@ -23,14 +23,17 @@ func (ap *aplication) GetDeckInHand(w http.ResponseWriter, req *http.Request) { 
 
 			ap.Games[id].Users[g].Deckinhand.AddingCard(ap.Games[id].CurrentDeck.Deckcard[idcard])
 
-			ap.Games[id].CurrentDeck.ClearCard(idcard)
+			ap.Games[id].ClearCard(idcard)
 		}
 	}
 	//Первая карта на столе
 	ap.Games[id].DropDeck.AddingCard(ap.Games[id].CurrentDeck.Deckcard[0])
-	ap.Games[id].CurrentDeck.ClearCard(0)
+	ap.Games[id].ClearCard(0)
 
 	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].FirstMove = true //Определение первого кто ходит
+
+	// НАЧАЛО ХОДА РЕАЛИЗОВАТЬ НЕ ЗАБУДЬ ДАУН
+
 	ap.Games[id].Users[rand.Intn(len(ap.Games[id].Users))].MoveInThisTurn = true
 
 	ap.Games[id].GameStart = true //Обьявляет что игра началась
@@ -78,14 +81,11 @@ func (ap *aplication) GetHighCard(w http.ResponseWriter, req *http.Request) { //
 	userforactions := UserForActions{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name}
 
 	v := ap.Games[id].CurrentDeck.Deckcard[0]
-	ap.Games[id].CurrentDeck.ClearCard(0)
+	ap.Games[id].ClearCard(0)
 	ap.Games[id].Users[iduser].Deckinhand.AddingCard(v) //Добавление карты в руку пользователю
 	ap.Games[id].Users[iduser].WriteAction(takecard, v) //Записываем действие "Взял карту"
-	for iduser, k := range ap.Games[id].Users {
-		if user.Id != k.Id {
-			ap.Games[id].Users[iduser].Actions = append(ap.Games[id].Users[iduser].Actions, action{Useraction: takecard, Data: userforactions}) //Еблан добавь вывод юзера
-		}
-	}
+
+	ap.Games[id].WriteActionForAllExceptOne(user.Id, takecard, userforactions)
 
 	resuser := UserResponse{Id: ap.Games[id].Users[iduser].Id, Name: ap.Games[id].Users[iduser].Name, Permitted: true, Actions: ap.Games[id].Users[iduser].Actions}
 
@@ -228,8 +228,8 @@ func (ap *aplication) PlayCard(w http.ResponseWriter, req *http.Request) {
 	id, _ := strconv.Atoi(mux.Vars(req)["id"])
 
 	type Request struct {
-		Id       int
-		Dropcard card
+		Id       int  `json:"id"`
+		Dropcard card `json:"card"`
 	}
 
 	var requestcard Request
@@ -252,20 +252,81 @@ func (ap *aplication) PlayCard(w http.ResponseWriter, req *http.Request) {
 	}
 
 	equals := CheckCard(requestcard.Dropcard, ap.Games[id].DropDeck.Deckcard)
-
+	idcard, _ := ap.Games[id].Users[userid].Deckinhand.SearchIdCard(requestcard.Dropcard)
 	if requestcard.Dropcard.CardType == numeric && equals {
-		var idcard int
-		for i, k := range ap.Games[id].Users[userid].Deckinhand.Deckcard {
-			if k == requestcard.Dropcard {
-				idcard = i
-			}
-		}
-		ap.Games[id].Users[userid].Deckinhand.ClearCard(idcard)
+		iduserskip := ap.Games[id].NextPlayerTurnNumeric(userid)
+
+		ap.Games[id].ClearCard(idcard)
 		ap.Games[id].DropDeck.AddingCard(requestcard.Dropcard)
 
+		ap.Games[id].Users[iduserskip].WriteAction(playcard, requestcard.Dropcard)
+		ap.Games[id].WriteActionForAllExceptOne(iduserskip, playcard, requestcard)
+
+		responsebool.Permitted = true
+		help.RenderAndWrite(w, responsebool)
+	}
+
+	if requestcard.Dropcard.CardType == drawtwo && equals {
+		iduserskip := ap.Games[id].NextPlayerTurnSkip(userid)
+
+		ap.Games[id].ClearCard(idcard)
+		ap.Games[id].DropDeck.AddingCard(requestcard.Dropcard)
+
+		ap.Games[id].Users[iduserskip].WriteAction(playcard, requestcard.Dropcard)
+		ap.Games[id].WriteActionForAllExceptOne(iduserskip, playcard, requestcard)
+
+		ap.Games[id].Users[iduserskip].WriteAction(skipmove, nil)
+		ap.Games[id].WriteActionForAllExceptOne(iduserskip, skipmove, ap.Games[id].Users[userid].Id)
+		for i := 0; i < 2; i++ {
+			ap.Games[id].Users[iduserskip].WriteAction(takecard, ap.Games[id].CurrentDeck.Deckcard[0])
+			ap.Games[id].Users[iduserskip].Deckinhand.AddingCard(ap.Games[id].CurrentDeck.Deckcard[0])
+			ap.Games[id].ClearCard(0)
+
+			cardforplayer := Request{Id: ap.Games[id].Users[iduserskip].Id, Dropcard: ap.Games[id].CurrentDeck.Deckcard[0]}
+			ap.Games[id].WriteActionForAllExceptOne(iduserskip, takecard, cardforplayer)
+		}
+
+		responsebool.Permitted = true
+		help.RenderAndWrite(w, responsebool)
+	}
+
+	if requestcard.Dropcard.CardType == skip && equals {
+		iduserskip := ap.Games[id].NextPlayerTurnSkip(userid)
+
+		ap.Games[id].Users[iduserskip].WriteAction(skipmove, nil)
+		ap.Games[id].WriteActionForAllExceptOne(iduserskip, skipmove, ap.Games[id].Users[userid].Id)
+
+		responsebool.Permitted = true
+		help.RenderAndWrite(w, responsebool)
+	}
+
+	if requestcard.Dropcard.CardType == drawfore && equals {
+		iduserskip := ap.Games[id].NextPlayerTurnSkip(userid)
+
+		ap.Games[id].ClearCard(idcard)
+		ap.Games[id].DropDeck.AddingCard(requestcard.Dropcard)
+
+		ap.Games[id].Users[iduserskip].WriteAction(playcard, requestcard.Dropcard)
+		ap.Games[id].WriteActionForAllExceptOne(iduserskip, playcard, requestcard)
+
+		ap.Games[id].Users[iduserskip].WriteAction(skipmove, nil)
+		ap.Games[id].WriteActionForAllExceptOne(iduserskip, skipmove, ap.Games[id].Users[userid].Id)
+		for i := 0; i < 4; i++ {
+			ap.Games[id].Users[iduserskip].WriteAction(takecard, ap.Games[id].CurrentDeck.Deckcard[0])
+			ap.Games[id].Users[iduserskip].Deckinhand.AddingCard(ap.Games[id].CurrentDeck.Deckcard[0])
+			ap.Games[id].ClearCard(0)
+
+			cardforplayer := Request{Id: ap.Games[id].Users[iduserskip].Id, Dropcard: ap.Games[id].CurrentDeck.Deckcard[0]}
+			ap.Games[id].WriteActionForAllExceptOne(iduserskip, takecard, cardforplayer)
+		}
+
+		responsebool.Permitted = true
+		help.RenderAndWrite(w, responsebool)
+	}
+
+	if requestcard.Dropcard.CardType == revers && equals {
+		responsebool.Permitted = true
+		help.RenderAndWrite(w, responsebool)
 	}
 
 }
-
-//методы: Вернуть список комнат, Вернуть список игроков ИД
-//Переделать переддачу черех экшоны

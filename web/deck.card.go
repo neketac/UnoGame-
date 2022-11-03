@@ -25,6 +25,7 @@ type cardtype string
 type equalscard struct {
 	equalscolor  bool
 	equalsnumber bool
+	equalstype   bool
 }
 
 type card struct {
@@ -40,6 +41,46 @@ type deck struct {
 func NewDeck() *deck {
 	deck := deck{Deckcard: make([]card, 0)}
 	return &deck
+}
+
+func CheckCard(c card, dropdeck []card) bool {
+	if c.CardType == drawfore {
+		return true
+	}
+
+	lendropdeck := len(dropdeck)
+	equals := equalscard{}
+
+	switch c.Color {
+	case dropdeck[lendropdeck-1].Color:
+		equals.equalscolor = true
+	default:
+		equals.equalscolor = false
+	}
+
+	switch c.Number {
+	case dropdeck[lendropdeck-1].Number:
+		equals.equalscolor = true
+	default:
+		equals.equalscolor = false
+	}
+
+	switch c.CardType {
+	case dropdeck[lendropdeck-1].CardType:
+		equals.equalstype = true
+	default:
+		equals.equalstype = false
+	}
+
+	if (c.CardType == drawtwo || c.CardType == skip || c.CardType == revers) && (equals.equalscolor || equals.equalstype) {
+		return true
+	}
+
+	if c.CardType == numeric && (equals.equalscolor || equals.equalsnumber) {
+		return true
+	}
+
+	return false
 }
 
 func (d *deck) GenerateDeck() {
@@ -71,57 +112,17 @@ func (d *deck) Shuffle() {
 		func(i, j int) { d.Deckcard[i], d.Deckcard[j] = d.Deckcard[j], d.Deckcard[i] })
 }
 
-func CheckCard(c card, dropdeck []card) bool {
-	if c.Color == wild {
-		return true
-	}
-
-	lendropdeck := len(dropdeck)
-	equals := equalscard{}
-
-	switch c.Color {
-	case dropdeck[lendropdeck-1].Color:
-		equals.equalscolor = true
-	default:
-		equals.equalscolor = false
-	}
-
-	switch c.Number {
-	case dropdeck[lendropdeck-1].Number:
-		equals.equalscolor = true
-	default:
-		equals.equalscolor = false
-	}
-
-	if (c.CardType == drawtwo || c.CardType == skip || c.CardType == revers) && equals.equalscolor {
-		return true
-	}
-
-	if c.CardType == numeric && (equals.equalscolor || equals.equalsnumber) {
-		return true
-	}
-
-	return false
-}
-
 // arr []card, idcard int
-func (arr *deck) ClearCard(idcard int) {
-	len := len(arr.Deckcard)
-
-	if len == 1 {
-		arr.Deckcard = nil
-		return
-	}
-
-	if idcard == 0 {
-		arr.Deckcard = append(arr.Deckcard[1:2], arr.Deckcard[2:]...)
-	} else if idcard == len-1 {
-		arr.Deckcard = append(arr.Deckcard[:idcard-1], arr.Deckcard[idcard-1:idcard]...)
-	} else {
-		arr.Deckcard = append(arr.Deckcard[:idcard-1], arr.Deckcard[idcard+1:]...)
-	}
-}
 
 func (arr *deck) AddingCard(cardinarr card) {
 	arr.Deckcard = append(arr.Deckcard, cardinarr)
+}
+
+func (arr *deck) SearchIdCard(cardinarr card) (int, bool) {
+	for i, k := range arr.Deckcard {
+		if k == cardinarr {
+			return i, true
+		}
+	}
+	return 0, false
 }
