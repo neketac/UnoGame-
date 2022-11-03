@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 )
 
 type aplication struct {
@@ -41,8 +40,8 @@ func main() {
 
 	// r.HandleFunc("/articles", ArticlesHandler)
 	// http.Handle("/", r)
-	handler := cors.Default().Handler(r)
+
 	log.Printf("Запуск сервера на http://127.0.0.1:80")
-	http.ListenAndServe("", handler)
+	http.ListenAndServe("", r)
 
 }

@@ -107,6 +107,12 @@ func CheckCard(c card, dropdeck []card) bool {
 // arr []card, idcard int
 func (arr *deck) ClearCard(idcard int) {
 	len := len(arr.Deckcard)
+
+	if len == 1 {
+		arr.Deckcard = nil
+		return
+	}
+
 	if idcard == 0 {
 		arr.Deckcard = append(arr.Deckcard[1:2], arr.Deckcard[2:]...)
 	} else if idcard == len-1 {
