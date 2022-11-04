@@ -45,6 +45,16 @@ func (g *game) SearchIdUser(id int) (int, bool) {
 	}
 	return 0, false
 }
+
+func (g aplication) SearchIdGame(id int) (int, bool) {
+	for i, k := range g.Games {
+		if id == k.Id {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
 func (g *game) WriteActionForAll(s string, v interface{}) {
 	for _, k := range g.Users {
 		k.Actions = append(k.Actions, action{Useraction: s, Data: v})
@@ -132,4 +142,12 @@ func (g *game) ClearCard(idcard int) {
 	} else {
 		g.CurrentDeck.Deckcard = append(g.CurrentDeck.Deckcard[:idcard-1], g.CurrentDeck.Deckcard[idcard+1:]...)
 	}
+}
+
+func (g *game) WriteActionPlayCard(userid, idcard int, cardplayed card) {
+	g.Users[userid].Deckinhand.ClearCardInHand(idcard)
+	g.DropDeck.AddingCard(cardplayed)
+
+	g.Users[userid].WriteAction(playcard, cardplayed)
+	g.WriteActionForAllExceptOne(userid, playcard, cardplayed)
 }

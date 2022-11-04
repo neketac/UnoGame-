@@ -126,3 +126,14 @@ func (arr *deck) SearchIdCard(cardinarr card) (int, bool) {
 	}
 	return 0, false
 }
+func (g *deck) ClearCardInHand(idcard int) {
+	lendec := len(g.Deckcard)
+
+	if idcard == 0 {
+		g.Deckcard = append(g.Deckcard[1:2], g.Deckcard[2:]...)
+	} else if idcard == lendec-1 {
+		g.Deckcard = append(g.Deckcard[:idcard-1], g.Deckcard[idcard-1:idcard]...)
+	} else {
+		g.Deckcard = append(g.Deckcard[:idcard-1], g.Deckcard[idcard+1:]...)
+	}
+}
